@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "boggle-analytics"
+version = "0.1.0"
+description = "A repo containing various analyses of my performance in Boggle"
+authors = ["Trevor Hubbard <trevormhubbard@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.11"
+pandas = "^2.2.0"
+dash = "^2.15.0"
+plotly = "^5.19.0"
+google-api-python-client = "^2.118.0"
+google-auth-httplib2 = "^0.2.0"
+google-auth-oauthlib = "^1.2.0"
+ipykernel = "^6.29.2"
+pickleshare = "^0.7.5"
+pyarrow = "^15.0.0"
+openpyxl = "^3.1.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
