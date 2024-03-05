@@ -17,7 +17,10 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 
 # Importing different custom modules
-from utils.visualizations import percentage_of_total_points_scored_line_graph
+from utils.visualizations import (
+    percentage_of_total_points_scored_line_graph,
+    win_loss_heatmap,
+)
 
 # Set up the app
 app = dash.Dash(
@@ -36,8 +39,8 @@ game_level_stats_df = pd.read_excel("data/game-level-stats.xlsx")
 # Below, I'm going to define the layout of the app.
 
 # Define some constants for the app layout
-ROW_SPAING = "30px"
-DEFAULT_ROLLING_AVG_WINDOW_SIZE = 5
+ROW_SPAING = "20px"
+DEFAULT_ROLLING_AVG_WINDOW_SIZE = 15
 
 # Assign the app layout
 app.layout = dbc.Container(
@@ -80,7 +83,7 @@ app.layout = dbc.Container(
                         dbc.Row(
                             children=[
                                 dbc.Col(
-                                    lg=9,
+                                    md=9,
                                     xs=12,
                                     children=[
                                         dcc.Graph(
@@ -95,7 +98,7 @@ app.layout = dbc.Container(
                                     style={"paddingRight": "5px"},
                                 ),
                                 dbc.Col(
-                                    lg=3,
+                                    md=3,
                                     xs=12,
                                     children=[
                                         dmc.Text(
@@ -109,6 +112,7 @@ app.layout = dbc.Container(
                                                 dmc.Checkbox(
                                                     id="pct-points-scored-show-each-round",
                                                     label="Show Each Round",
+                                                    checked=True,
                                                 ),
                                             ],
                                             style={"marginBottom": "20px"},
@@ -118,7 +122,7 @@ app.layout = dbc.Container(
                                                 dmc.Checkbox(
                                                     id="pct-points-scored-show-dates",
                                                     label="Show Dates",
-                                                    checked=True,
+                                                    checked=False,
                                                 ),
                                             ],
                                             style={"marginBottom": "20px"},
@@ -126,7 +130,7 @@ app.layout = dbc.Container(
                                         html.Div(
                                             [
                                                 dmc.Text(
-                                                    "Rolling Average Window Size",
+                                                    "Rolling Avg. Window (Rounds)",
                                                     size="0.95rem",
                                                 ),
                                                 html.Div(
@@ -143,6 +147,76 @@ app.layout = dbc.Container(
                                                     style={"width": "50%"},
                                                 ),
                                             ]
+                                        ),
+                                    ],
+                                ),
+                            ]
+                        ),
+                    ]
+                )
+            ],
+            style={"marginBottom": ROW_SPAING},
+        ),
+        # WIN-LOSS HEATMAP
+        dbc.Row(
+            children=[
+                dbc.Col(
+                    children=[
+                        dmc.Text(
+                            "Win Streaks",
+                            size="1.5rem",
+                            weight=600,
+                        ),
+                        dcc.Markdown(
+                            """
+                            Below, I've mapped out each of our wins over time. You can see our longest streak of games won!
+                            """,
+                        ),
+                        dbc.Row(
+                            children=[
+                                dbc.Col(
+                                    md=9,
+                                    xs=12,
+                                    children=[
+                                        dcc.Graph(
+                                            id="win-loss-heatmap",
+                                            figure=win_loss_heatmap(
+                                                game_level_stats_df=game_level_stats_df
+                                            ),
+                                            config={"displayModeBar": False},
+                                        ),
+                                    ],
+                                    style={"paddingRight": "5px"},
+                                ),
+                                dbc.Col(
+                                    md=3,
+                                    xs=12,
+                                    children=[
+                                        dmc.Text(
+                                            "Controls",
+                                            size="1.2rem",
+                                            weight=500,
+                                            style={"marginBottom": "10px"},
+                                        ),
+                                        html.Div(
+                                            [
+                                                dmc.Checkbox(
+                                                    id="win-loss-heatmap-show-longest-streak",
+                                                    label="Show Longest Streak",
+                                                    checked=True,
+                                                ),
+                                            ],
+                                            style={"marginBottom": "20px"},
+                                        ),
+                                        html.Div(
+                                            [
+                                                dmc.Checkbox(
+                                                    id="win-loss-heatmap-show-dates",
+                                                    label="Show Dates",
+                                                    checked=False,
+                                                ),
+                                            ],
+                                            style={"marginBottom": "20px"},
                                         ),
                                     ],
                                 ),
@@ -187,6 +261,28 @@ def update_pct_points_scored_line_graph(
         show_each_round=show_each_round,
         show_dates=show_dates,
         rolling_avg_window_size=rolling_avg_window_size,
+    )
+
+
+@callback(
+    output=Output("win-loss-heatmap", "figure"),
+    inputs=[
+        Input("win-loss-heatmap-show-dates", "checked"),
+        Input("win-loss-heatmap-show-longest-streak", "checked"),
+    ],
+)
+def update_win_loss_heatmap(show_dates: bool, show_longest_streak: bool):
+    """
+    This callback will update the "Win-Loss Heatmap".
+
+    Args:
+        - show_dates (bool): Whether or not to show the dates on the x-axis.
+        - show_longest_streak (bool): Whether or not to show the longest win/loss streak.
+    """
+    return win_loss_heatmap(
+        game_level_stats_df=game_level_stats_df,
+        show_dates=show_dates,
+        show_longest_streak=show_longest_streak,
     )
 
 
