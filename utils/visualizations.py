@@ -22,6 +22,89 @@ from utils.misc import abbreviate_month
 # Each of the methods below will generate a different visualization.
 
 
+def total_wins_bar_chart(
+    game_level_stats_df: pd.DataFrame, height: int = 250, annotation_font_size: int = 22
+):
+    """
+    This method will generate a Plotly bar chart showing who's won more games.
+
+    Args:
+        - game_level_stats_df: The game level stats dataframe
+        - height: The height of the bar chart (default is 400)
+        - annotation_font_size: The font size of the annotations (default is 18)
+
+    Returns:
+        - A Plotly bar chart
+    """
+
+    # First, we're going to transform the game level stats dataframe to show the total wins for each player
+    total_wins_df = (
+        game_level_stats_df.groupby("winner")
+        .size()
+        .reset_index(name="Wins")
+        .rename(columns={"winner": "Player"})
+    )
+    
+    # Order the players so that Trevor is first
+    total_wins_df = total_wins_df.sort_values("Player", ascending=False)
+
+    # Rename "Sarah" and "Trevor" to "<b>Sarah</b>" and "<b>Trevor</b>" to make them bold
+    total_wins_df["Player"] = total_wins_df["Player"].apply(lambda x: f"<b>{x}</b>")
+
+    # Now, with this in mind, we can create the bar chart
+    total_wins_fig = px.bar(
+        total_wins_df,
+        x="Wins",
+        y="Player",
+        color="Player",
+        color_discrete_map={"<b>Trevor</b>": TREVOR_COLOR, "<b>Sarah</b>": SARAH_COLOR},
+        labels={"Wins": "Total Wins", "Player": ""},
+        height=height,
+    )
+
+    # Remove the legend, and change the margins
+    MARGIN_SIZE = 20
+    total_wins_fig.update_layout(
+        showlegend=False,
+        margin=dict(l=MARGIN_SIZE, r=MARGIN_SIZE, t=MARGIN_SIZE, b=MARGIN_SIZE, pad=20),
+    )
+
+    # Outline each of the bars with a black line
+    total_wins_fig.update_traces(marker_line_color="black", marker_line_width=1)
+
+    # Make the plot background white
+    total_wins_fig.update_layout(plot_bgcolor="white")
+
+    # Remove the x-axis title and ticks
+    total_wins_fig.update_xaxes(title=None, showticklabels=False)
+
+    # Add annotation text in the middle of each bar to show the total wins
+    for i, row in total_wins_df.iterrows():
+        cur_wins = row["Wins"]
+
+        # Determine the x-position of the annotation
+        x_pos = cur_wins / 2
+
+        # Add the annotation, using the center of the text as the x-anchor
+        total_wins_fig.add_annotation(
+            x=x_pos,
+            y=row["Player"],
+            text=f"<b>{str(cur_wins)} wins</b><br><sub>{cur_wins/sum(total_wins_df['Wins'])*100:.0f}% of total games</sub>",
+            font=dict(size=annotation_font_size, color="white"),
+            showarrow=False,
+            xanchor="center",
+        )
+
+    # Make the y-axis labels a little bigger
+    total_wins_fig.update_yaxes(tickfont=dict(size=16))
+
+    # Disable hoverinfo
+    total_wins_fig.update_traces(hoverinfo="skip", hovertemplate=None)
+
+    # Return the figure
+    return total_wins_fig
+
+
 def percentage_of_total_points_scored_line_graph(
     round_level_stats_df: pd.DataFrame,
     show_each_round: bool = False,
@@ -410,3 +493,123 @@ def win_loss_heatmap(
 
     # Return the heatmap
     return win_loss_heatmap
+
+
+def round_score_distribution_boxplot(
+    round_level_stats_df: pd.DataFrame,
+    violin_plot: bool = False,
+    hide_legend: bool = True,
+    height: int = 400,
+    use_potential_points: bool = False,
+):
+    """
+    This method will generate a boxplot for the points scored per round
+    by each player.
+
+    Args:
+        - round_level_stats_df (pd.DataFrame): The DataFrame with the round level stats
+        - violin_plot (bool): Whether or not to generate a violin plot instead of a boxplot
+        - hide_legend (bool): Whether or not to hide the legend
+        - height (int): The height of the plot
+        - use_potential_points (bool): Whether or not to use the potential points instead of the actual points
+
+    Returns:
+        A Plotly figure
+    """
+    # TODO: Make the hovertext more detailed
+
+    # Create a DataFrame for the points scored per round
+    score_distribution_boxplot_df_records = []
+    for row in round_level_stats_df.itertuples():
+        for player in ["Trevor", "Sarah"]:
+            score_distribution_boxplot_df_records.append(
+                {
+                    "round_id": f"{row.game_date}_round_{row.round_num}",
+                    "game_date": row.game_date,
+                    "round_num": row.round_num,
+                    "player": player,
+                    "score": getattr(row, f"{player.lower()}_points_scored"),
+                    "points_potential": getattr(
+                        row, f"{player.lower()}_points_potential"
+                    ),
+                }
+            )
+
+    # Create the DataFrame
+    score_distribution_boxplot_df = pd.DataFrame(score_distribution_boxplot_df_records)
+
+    # Make the Plotly figure
+    score_col_to_use = "score" if not use_potential_points else "points_potential"
+    score_col_label = (
+        "Points Scored" if not use_potential_points else "Potential Points"
+    )
+    score_distribution_fig = px.box(
+        score_distribution_boxplot_df,
+        x="player",
+        y=score_col_to_use,
+        color="player",
+        labels={
+            "round_id": "Round ID",
+            score_col_to_use: score_col_label,
+            "player": "",
+        },
+        color_discrete_map={"Trevor": TREVOR_COLOR, "Sarah": SARAH_COLOR},
+        points="all",
+        height=height,
+    )
+
+    # If the violin plot is requested, update the figure
+    if violin_plot:
+        score_distribution_fig = px.violin(
+            score_distribution_boxplot_df,
+            x="player",
+            y=score_col_to_use,
+            color="player",
+            labels={
+                "round_id": "Round ID",
+                score_col_to_use: score_col_label,
+                "player": "",
+            },
+            color_discrete_map={"Trevor": TREVOR_COLOR, "Sarah": SARAH_COLOR},
+            points="all",
+        )
+
+    # Make the background white
+    score_distribution_fig.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+    )
+
+    # Make the legend horizontal, and move it to the top-right corner of the figure (using the top-right corner as an anchor)
+    score_distribution_fig.update_layout(
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=1.1,
+            xanchor="right",
+            x=1,
+        )
+    )
+
+    # Make the markers have a black border and a bit of transparency
+    score_distribution_fig.update_traces(
+        marker=dict(
+            line=dict(width=1, color="black"),
+            opacity=0.7,
+        )
+    )
+
+    # Reduce the margins
+    PLOT_MARGINS = 20
+    score_distribution_fig.update_layout(
+        margin=dict(
+            l=PLOT_MARGINS, r=PLOT_MARGINS, b=PLOT_MARGINS, t=PLOT_MARGINS, pad=10
+        )
+    )
+
+    # If the legend is requested to be hidden, hide it
+    if hide_legend:
+        score_distribution_fig.update_layout(showlegend=False)
+
+    # Return the figure
+    return score_distribution_fig

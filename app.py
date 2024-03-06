@@ -20,6 +20,8 @@ import dash_mantine_components as dmc
 from utils.visualizations import (
     percentage_of_total_points_scored_line_graph,
     win_loss_heatmap,
+    round_score_distribution_boxplot,
+    total_wins_bar_chart,
 )
 
 # Set up the app
@@ -63,6 +65,35 @@ app.layout = dbc.Container(
             style={
                 "marginBottom": ROW_SPAING,
             },
+        ),
+        # TOTAL WINS
+        dbc.Row(
+            children=[
+                dbc.Col(
+                    children=[
+                        dmc.Text(
+                            "Total Wins",
+                            size="1.5rem",
+                            weight=600,
+                        ),
+                        dcc.Markdown(
+                            """
+                            This chart shows the total number of games won by each player. 
+                            It's a good way to see who's been winning more games overall.
+                            """,
+                        ),
+                        dcc.Graph(
+                            id="total-wins-bar-chart",
+                            figure=total_wins_bar_chart(
+                                game_level_stats_df=game_level_stats_df
+                            ),
+                            config={"displayModeBar": False},
+                        ),
+                    ],
+                    width=12,
+                )
+            ],
+            style={"marginBottom": ROW_SPAING},
         ),
         # PERCENTAGE OF TOTAL POINTS SCORED
         dbc.Row(
@@ -227,8 +258,78 @@ app.layout = dbc.Container(
             ],
             style={"marginBottom": ROW_SPAING},
         ),
+        # SCORING DISTRIBUTION
+        dbc.Row(
+            children=[
+                dbc.Col(
+                    width=12,
+                    children=[
+                        dmc.Text(
+                            "Scoring Distribution",
+                            size="1.5rem",
+                            weight=600,
+                        ),
+                        dcc.Markdown(
+                            """
+                            This chart shows the distribution of scores for each round. It's a good way to see how we're doing on average, and how consistent we are.
+                            """,
+                        ),
+                    ],
+                ),
+                dbc.Col(
+                    md=9,
+                    xs=12,
+                    children=[
+                        dcc.Graph(
+                            id="round-score-distribution-boxplot",
+                            figure=round_score_distribution_boxplot(
+                                round_level_stats_df=round_level_stats_df
+                            ),
+                            config={"displayModeBar": False},
+                        ),
+                    ],
+                    style={"paddingRight": "5px"},
+                ),
+                dbc.Col(
+                    md=3,
+                    xs=12,
+                    children=[
+                        dmc.Text(
+                            "Controls",
+                            size="1.2rem",
+                            weight=500,
+                            style={"marginBottom": "10px"},
+                        ),
+                        html.Div(
+                            [
+                                dmc.Checkbox(
+                                    id="round-score-distribution-boxplot-violin-plot",
+                                    label="Violin Plot",
+                                    checked=False,
+                                ),
+                            ],
+                            style={"marginBottom": "20px"},
+                        ),
+                        html.Div(
+                            [
+                                dmc.Checkbox(
+                                    id="round-score-distribution-boxplot-use-potential-points",
+                                    label="Use Potential Points",
+                                    checked=False,
+                                ),
+                            ],
+                            style={"marginBottom": "20px"},
+                        ),
+                    ],
+                ),
+            ]
+        ),
     ],
     fluid=True,
+    style={
+        "paddingLeft": "1.5rem",
+        "paddingRight": "1.5rem",
+    }
 )
 
 # ==========================
@@ -283,6 +384,30 @@ def update_win_loss_heatmap(show_dates: bool, show_longest_streak: bool):
         game_level_stats_df=game_level_stats_df,
         show_dates=show_dates,
         show_longest_streak=show_longest_streak,
+    )
+
+
+@callback(
+    output=Output("round-score-distribution-boxplot", "figure"),
+    inputs=[
+        Input("round-score-distribution-boxplot-violin-plot", "checked"),
+        Input("round-score-distribution-boxplot-use-potential-points", "checked"),
+    ],
+)
+def update_round_score_distribution_boxplot(
+    violin_plot: bool, use_potential_points: bool
+):
+    """
+    This callback will update the "Round Score Distribution" boxplot.
+
+    Args:
+        - violin_plot (bool): Whether or not to use a violin plot.
+        - use_potential_points (bool): Whether or not to use the potential points for each round.
+    """
+    return round_score_distribution_boxplot(
+        round_level_stats_df=round_level_stats_df,
+        violin_plot=violin_plot,
+        use_potential_points=use_potential_points,
     )
 
 
